@@ -1,0 +1,224 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Todo Django Rest Framework</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,600&display=swap" rel="stylesheet" />
+    <link href="{% static 'frontend/all.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'frontend/style.css' %}" rel="stylesheet" />
+<!--
+Tooplate 2118 Chilling Cafe
+https://www.tooplate.com/view/2118-chilling-cafe
+-->
+  </head>
+  <body>
+    <div class="tm-container">
+      <div class="tm-text-white tm-page-header-container">
+        <h1 class="tm-page-header">Todo</h1>
+      </div>
+      <div class="tm-main-content">
+        <div id="tm-intro-img"></div>
+        <!-- Coffee Menu -->
+        <section class="tm-section">
+          <h2 class="tm-section-header">Tasks List</h2>
+          <div class="tm-responsive-table">
+            <div id="form-wrapper">
+                <form id="form">
+                    <div style="display: flex;">
+                        <div style="flex: 6;">
+                            <input id="title" class="form-control" type="text" name="title" placeholder="Add text">
+                        </div>
+                        <div style="flex: 1;">
+                            <input id="submit" class="btn btn-success" type="submit">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div>
+                <table id="list-wrapper">
+                <tr class="tm-tr-header">
+                    <th>Tasks</th>
+                    <th>&nbsp;</th>
+                    <th>Edit</th>
+                    <th>Delete</th>
+                </tr>
+                
+                </table>
+            </div>
+          </div>
+        </section>
+
+      </div>
+      <footer class="tm-footer-text"><span>Photo by <a class="tm-footer-link" href="https://unsplash.com/@airfocus?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">airfocus</a> on <a class="tm-footer-link" href="https://unsplash.com/s/photos/task?utm_source=unsplash&amp;utm_medium=referral&amp;utm_content=creditCopyText">Unsplash</a></span></footer>
+    </div>
+    <script type="text/javascript">
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+
+        var activeItem = null
+        var listShot = []
+
+        buildList()
+        
+        function buildList(){
+            var wrapper = document.getElementById('list-wrapper')
+            // wrapper.innerHTML = ''
+
+            var url = 'http://127.0.0.1:8000/api/task-list/'
+
+            fetch(url)
+            .then((resp) => resp.json())
+            .then(function(data){
+                console.log('Data:', data)
+
+                var list = data
+
+                for(var i in list){
+
+                    try{
+                        document.getElementById(`data-row-${i}`).remove()
+                    }catch(err){
+
+                    }
+
+                    var listTitle = `<td class="tm-text-left title">${list[i].title}</td>`
+                    if(list[i].completed == true){
+                        var listTitle = `<td class="tm-text-left title"><strike>${list[i].title}</strike></td>`
+                    }
+
+                    var item = `
+                            
+                            <tr id="data-row-${i}">
+                                ${listTitle}
+                                <td>&nbsp;</td>
+                                <td><button class="btn btn-sm btn-outline-info edit">Edit</button></td>
+                                <td><button class="btn btn-sm btn-outline-dark delete">-</button></td>
+                            </tr>
+                    
+                    `
+                    wrapper.innerHTML += item
+                    
+                    if(listShot.length > list.length){
+                        for(var i = list.length; i < listShot.length; i++){
+                            document.getElementById(`data-row-${i}`).remove()
+                        }
+                    }
+                    listShot = list
+                    
+                }
+
+                for(let i in list){
+                var editBtn = document.getElementsByClassName('edit')[i]
+                var deleteBtn = document.getElementsByClassName('delete')[i]
+                var title = document.getElementsByClassName('title')[i]
+
+                editBtn.addEventListener('click', function(){
+                        editItem(list[i])
+                    
+                })
+                
+                deleteBtn.addEventListener('click', function(){
+                        deleteItem(list[i])
+                    
+                })
+
+                title.addEventListener('click', function(){
+                        strikeUnstrike(list[i])
+                    
+                })
+
+
+                }
+
+            })
+        }
+    
+        var form = document.getElementById('form-wrapper')
+        form.addEventListener('submit', function(e){
+            e.preventDefault()
+            console.log('Form submitted')
+
+            var url = 'http://127.0.0.1:8000/api/task-create/'
+            var title = document.getElementById('title').value
+
+            if(activeItem != null){
+                var url = `http://127.0.0.1:8000/api/task-update/${activeItem.id}/`
+            }
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-type': 'application/json',
+                    'x-CSRFToken': csrftoken,
+                },
+                body: JSON.stringify({'title': title})
+            })
+            .then(function(resp){
+                buildList()
+                document.getElementById('form').reset()
+            })
+        })
+
+        function editItem(item){
+            console.log('Item clicked', item)
+            activeItem = item
+            document.getElementById('title').value = activeItem.title
+        }
+
+        function deleteItem(item){
+            console.log('delete', item)
+
+            fetch(`http://127.0.0.1:8000/api/task-delete/${item.id}/`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-type': 'application/json',
+                    'x-CSRFToken': csrftoken,
+                }
+            })
+            .then((resp) => {
+                buildList()
+            })
+        }
+
+        function strikeUnstrike(item){
+            console.log('strike', item)
+            item.completed = !item.completed
+
+            fetch(`http://127.0.0.1:8000/api/task-update/${item.id}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-type': 'application/json',
+                    'x-CSRFToken': csrftoken,
+                },
+                body: JSON.stringify({'title': item.title, 'completed': item.completed})
+            })
+            .then((resp) => {
+                buildList()
+            })
+        }
+    </script>
+    <script>
+      
+    </script>
+  </body>
+</html>
